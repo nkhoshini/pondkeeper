@@ -1,0 +1,29 @@
+# This rule is not used by the project pondkeeper itself.
+# It is provided to allow the cluster admin to help manage permissions for users.
+#
+# Grants read-only access to cache.duckdb.org resources.
+# This role is intended for users who need visibility into these resources
+# without permissions to modify them. It is ideal for monitoring purposes and limited-access viewing.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: pondkeeper
+    app.kubernetes.io/managed-by: kustomize
+  name: duckdb-viewer-role
+rules:
+- apiGroups:
+  - cache.duckdb.org
+  resources:
+  - duckdbs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cache.duckdb.org
+  resources:
+  - duckdbs/status
+  verbs:
+  - get
