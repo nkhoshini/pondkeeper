@@ -32,11 +32,9 @@ type DuckDBSpec struct {
 	// Repository and tag of the DuckDB image to use.
 	Image DuckDBImage `json:"image,omitempty"`
 
-	Spec corev1.PodSpec `json:"spec,omitempty"`
-
-	// Port defines the port to expose. Default is typically 8080 or similar for gizmosql.
+	// Port defines the port to expose. Default is typically 31337 or similar for gizmosql.
 	// +optional
-	Port int32 `json:"port,omitempty"`
+	Port int32 `json:"port,omitempty" default:"31337"`
 }
 
 type DuckDBImage struct {
@@ -49,6 +47,10 @@ type DuckDBImage struct {
 type DuckDBStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// Conditions store the status conditions of the DuckDB instances
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // +kubebuilder:object:root=true
@@ -59,19 +61,8 @@ type DuckDB struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   DuckDBSpec   `json:"spec,omitempty"`
-	Status DuckDBStatus `json:"status,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-
-// DuckDBList contains a list of DuckDB.
-type DuckDBList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DuckDB `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&DuckDB{}, &DuckDBList{})
+	Name      string       `json:"name,omitempty"`
+	Namespace string       `json:"namespace,omitempty"`
+	Spec      DuckDBSpec   `json:"spec,omitempty"`
+	Status    DuckDBStatus `json:"status,omitempty"`
 }
