@@ -40,7 +40,7 @@ type DuckDBSpec struct {
 type DuckDBImage struct {
 	Repository string            `json:"repository,omitempty"`
 	Tag        string            `json:"tag,omitempty"`
-	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty" default:"IfNotPresent"`
+	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty" default:"Always"`
 }
 
 // DuckDBStatus defines the observed state of DuckDB.
@@ -61,8 +61,19 @@ type DuckDB struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Name      string       `json:"name,omitempty"`
-	Namespace string       `json:"namespace,omitempty"`
-	Spec      DuckDBSpec   `json:"spec,omitempty"`
-	Status    DuckDBStatus `json:"status,omitempty"`
+	Spec   DuckDBSpec   `json:"spec,omitempty"`
+	Status DuckDBStatus `json:"status,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+
+// DuckDBList contains a list of DuckDB.
+type DuckDBList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []DuckDB `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&DuckDB{}, &DuckDBList{})
 }

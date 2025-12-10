@@ -2,7 +2,7 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: duckdb.org
+domain: gizmodata.com
 layout:
 - go.kubebuilder.io/v4
 plugins:
@@ -15,8 +15,8 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: duckdb.org
-  group: cache
+  domain: gizmodata.com
+  group: engines
   kind: DuckDB
   path: github.com/nkhoshini/pondkeeper/api/v1alpha1
   version: v1alpha1

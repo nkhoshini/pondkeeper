@@ -1,4 +1,4 @@
 ## Append samples of your project ##
 resources:
-- cache_v1alpha1_duckdb.yaml
+- engines_v1alpha1_duckdb.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

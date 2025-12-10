@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	cachev1alpha1 "github.com/nkhoshini/pondkeeper/api/v1alpha1"
+	v1alpha1 "github.com/nkhoshini/pondkeeper/api/v1alpha1"
 )
 
 var _ = Describe("DuckDB Controller", func() {
@@ -40,13 +40,13 @@ var _ = Describe("DuckDB Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		duckdb := &cachev1alpha1.DuckDB{}
+		duckdb := &v1alpha1.DuckDB{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind DuckDB")
 			err := k8sClient.Get(ctx, typeNamespacedName, duckdb)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &cachev1alpha1.DuckDB{
+				resource := &v1alpha1.DuckDB{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +59,7 @@ var _ = Describe("DuckDB Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &cachev1alpha1.DuckDB{}
+			resource := &v1alpha1.DuckDB{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 

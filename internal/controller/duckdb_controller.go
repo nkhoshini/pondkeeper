@@ -34,10 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	cachev1alpha1 "github.com/nkhoshini/pondkeeper/api/v1alpha1"
+	v1alpha1 "github.com/nkhoshini/pondkeeper/api/v1alpha1"
 )
 
-const duckdbFinalizer = "cache.duckdb.org/finalizer"
+const duckdbFinalizer = "gizmodata.com/finalizer"
 
 // Definitions to manage status conditions
 const (
@@ -54,9 +54,9 @@ type DuckDBReconciler struct {
 	Recorder record.EventRecorder
 }
 
-// +kubebuilder:rbac:groups=cache.duckdb.org,resources=duckdbs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=cache.duckdb.org,resources=duckdbs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=cache.duckdb.org,resources=duckdbs/finalizers,verbs=update
+// +kubebuilder:rbac:groups=gizmodata.com,resources=duckdbs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=gizmodata.com,resources=duckdbs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=gizmodata.com,resources=duckdbs/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 
@@ -66,7 +66,7 @@ func (r *DuckDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	log := logf.FromContext(ctx)
 
 	// Fetch the DuckDB instance
-	duckdb := &cachev1alpha1.DuckDB{}
+	duckdb := &v1alpha1.DuckDB{}
 	err := r.Get(ctx, req.NamespacedName, duckdb)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -204,7 +204,7 @@ func (r *DuckDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 }
 
 // doFinalizerOperationsForDuckDB will perform the required operations before delete the CR.
-func (r *DuckDBReconciler) doFinalizerOperationsForDuckDB(cr *cachev1alpha1.DuckDB) {
+func (r *DuckDBReconciler) doFinalizerOperationsForDuckDB(cr *v1alpha1.DuckDB) {
 	// TODO(user): Add the cleanup steps that the operator
 	// needs to do before the CR can be deleted.
 
@@ -217,7 +217,7 @@ func (r *DuckDBReconciler) doFinalizerOperationsForDuckDB(cr *cachev1alpha1.Duck
 
 // podForDuckDB returns a DuckDB Pod object
 func (r *DuckDBReconciler) podForDuckDB(
-	duckdb *cachev1alpha1.DuckDB) (*corev1.Pod, error) {
+	duckdb *v1alpha1.DuckDB) (*corev1.Pod, error) {
 	// Use the image from Spec if provided, otherwise fallback or error
 	// For now, we assume the user provides valid PodSpec or at least Image.
 	// If Spec.Spec is empty, we construct a minimal one.
@@ -294,7 +294,7 @@ func imageForDuckDB() (string, error) {
 // SetupWithManager sets up the controller with the Manager.
 func (r *DuckDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cachev1alpha1.DuckDB{}).
+		For(&v1alpha1.DuckDB{}).
 		Owns(&corev1.Pod{}).
 		Complete(r)
 }

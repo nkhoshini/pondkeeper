@@ -20,7 +20,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - cache.duckdb.org
+  - gizmodata.com
   resources:
   - duckdbs
   verbs:
@@ -32,13 +32,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cache.duckdb.org
+  - gizmodata.com
   resources:
   - duckdbs/finalizers
   verbs:
   - update
 - apiGroups:
-  - cache.duckdb.org
+  - gizmodata.com
   resources:
   - duckdbs/status
   verbs:
