@@ -39,6 +39,27 @@ spec:
           spec:
             description: DuckDBSpec defines the desired state of DuckDB.
             properties:
+              auth:
+                description: Authentication configuration.
+                properties:
+                  passwordKey:
+                    type: string
+                  secretRef:
+                    description: |-
+                      SecretReference represents a Secret Reference. It has enough information to retrieve secret
+                      in any namespace
+                    properties:
+                      name:
+                        description: name is unique within a namespace to reference
+                          a secret resource.
+                        type: string
+                      namespace:
+                        description: namespace defines the space within which the
+                          secret name must be unique.
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                type: object
               image:
                 description: Repository and tag of the DuckDB image to use.
                 properties:

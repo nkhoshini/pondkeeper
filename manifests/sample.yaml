@@ -1,0 +1,13 @@
+apiVersion: gizmodata.com/v1alpha1
+kind: DuckDB
+metadata:
+  name: duckdb-sample
+  labels:
+    app.kubernetes.io/name: pondkeeper
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  image:
+    repository: gizmodata/gizmosql
+    tag: latest
+    pullPolicy: Always
+  port: 31337

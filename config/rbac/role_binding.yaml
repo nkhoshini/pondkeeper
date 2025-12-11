@@ -13,3 +13,6 @@ subjects:
 - kind: ServiceAccount
   name: controller-manager
   namespace: system
+- kind: ServiceAccount
+  name: pondkeeper-controller-manager
+  namespace: pondkeeper-system

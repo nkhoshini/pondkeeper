@@ -14,10 +14,24 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - pods
+  - services
   verbs:
-  - get
+  - create
+  - delete
   - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - gizmodata.com

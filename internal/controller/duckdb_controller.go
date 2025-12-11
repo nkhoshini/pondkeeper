@@ -22,6 +22,7 @@ import (
 	"os"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -41,7 +42,7 @@ const duckdbFinalizer = "gizmodata.com/finalizer"
 
 // Definitions to manage status conditions
 const (
-	// typeAvailableDuckDB represents the status of the Pod reconciliation
+	// typeAvailableDuckDB represents the status of the StatefulSet reconciliation
 	typeAvailableDuckDB = "Available"
 	// typeDegradedDuckDB represents the status used when the custom resource is deleted and the finalizer operations are yet to occur.
 	typeDegradedDuckDB = "Degraded"
@@ -58,7 +59,8 @@ type DuckDBReconciler struct {
 // +kubebuilder:rbac:groups=gizmodata.com,resources=duckdbs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=gizmodata.com,resources=duckdbs/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
-// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -152,48 +154,74 @@ func (r *DuckDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, nil
 	}
 
-	// Check if the Pod already exists, if not create a new one
-	found := &corev1.Pod{}
-	err = r.Get(ctx, types.NamespacedName{Name: duckdb.Name, Namespace: duckdb.Namespace}, found)
+	// Check if the StatefulSet already exists, if not create a new one
+	foundStatefulSet := &appsv1.StatefulSet{}
+	err = r.Get(ctx, types.NamespacedName{Name: duckdb.Name, Namespace: duckdb.Namespace}, foundStatefulSet)
 	if err != nil && apierrors.IsNotFound(err) {
-		// Define a new Pod
-		pod, err := r.podForDuckDB(duckdb)
+		// Define a new StatefulSet
+		statefulSet, err := r.statefulSetForDuckDB(duckdb)
 		if err != nil {
-			log.Error(err, "Failed to define new Pod resource for DuckDB")
+			log.Error(err, "Failed to define new StatefulSet resource for DuckDB")
 			return ctrl.Result{}, err
 		}
 
-		log.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-		if err = r.Create(ctx, pod); err != nil {
-			log.Error(err, "Failed to create new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
+		log.Info("Creating a new StatefulSet", "StatefulSet.Namespace", statefulSet.Namespace, "StatefulSet.Name", statefulSet.Name)
+		if err = r.Create(ctx, statefulSet); err != nil {
+			log.Error(err, "Failed to create new StatefulSet", "StatefulSet.Namespace", statefulSet.Namespace, "StatefulSet.Name", statefulSet.Name)
 			return ctrl.Result{}, err
 		}
 
-		// Pod created successfully
+		// StatefulSet created successfully
 		// We will requeue the reconciliation so that we can ensure the state
 		// and move forward for the next operations
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	} else if err != nil {
-		log.Error(err, "Failed to get Pod")
+		log.Error(err, "Failed to get StatefulSet")
 		return ctrl.Result{}, err
 	}
 
-	// Update the DuckDB status with the pod names
-	// List the pods for this duckdb's pod
-	podList := &corev1.PodList{}
+	// Check if the Service already exists, if not create a new one
+	foundService := &corev1.Service{}
+	err = r.Get(ctx, types.NamespacedName{Name: duckdb.Name, Namespace: duckdb.Namespace}, foundService)
+	if err != nil && apierrors.IsNotFound(err) {
+		// Define a new Service
+		service, err := r.serviceForDuckDB(duckdb)
+		if err != nil {
+			log.Error(err, "Failed to define new Service resource for DuckDB")
+			return ctrl.Result{}, err
+		}
+
+		log.Info("Creating a new Service", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
+		if err = r.Create(ctx, service); err != nil {
+			log.Error(err, "Failed to create new Service", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
+			return ctrl.Result{}, err
+		}
+
+		// Service created successfully
+		// We will requeue the reconciliation so that we can ensure the state
+		// and move forward for the next operations
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get Service")
+		return ctrl.Result{}, err
+	}
+
+	// Update the DuckDB status with the statefulset names
+	// List the statefulsets for this duckdb instance
+	statefulSetList := &appsv1.StatefulSetList{}
 	listOpts := []client.ListOption{
 		client.InNamespace(duckdb.Namespace),
 		client.MatchingLabels(labelsForDuckDB(duckdb.Name)),
 	}
-	if err = r.List(ctx, podList, listOpts...); err != nil {
-		log.Error(err, "Failed to list pods", "DuckDB.Namespace", duckdb.Namespace, "DuckDB.Name", duckdb.Name)
+	if err = r.List(ctx, statefulSetList, listOpts...); err != nil {
+		log.Error(err, "Failed to list StatefulSets", "DuckDB.Namespace", duckdb.Namespace, "DuckDB.Name", duckdb.Name)
 		return ctrl.Result{}, err
 	}
 
 	// Update status.Conditions if needed
 	meta.SetStatusCondition(&duckdb.Status.Conditions, metav1.Condition{Type: typeAvailableDuckDB,
 		Status: metav1.ConditionTrue, Reason: "Reconciling",
-		Message: fmt.Sprintf("Pod for custom resource %s created successfully", duckdb.Name)})
+		Message: fmt.Sprintf("StatefulSet for custom resource %s created successfully", duckdb.Name)})
 
 	if err := r.Status().Update(ctx, duckdb); err != nil {
 		log.Error(err, "Failed to update DuckDB status")
@@ -215,11 +243,35 @@ func (r *DuckDBReconciler) doFinalizerOperationsForDuckDB(cr *v1alpha1.DuckDB) {
 			cr.Namespace))
 }
 
-// podForDuckDB returns a DuckDB Pod object
-func (r *DuckDBReconciler) podForDuckDB(
-	duckdb *v1alpha1.DuckDB) (*corev1.Pod, error) {
+func (r *DuckDBReconciler) serviceForDuckDB(duckdb *v1alpha1.DuckDB) (*corev1.Service, error) {
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      duckdb.Name,
+			Namespace: duckdb.Namespace,
+			Labels:    labelsForDuckDB(duckdb.Name),
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: labelsForDuckDB(duckdb.Name),
+			Ports: []corev1.ServicePort{{
+				Port: duckdb.Spec.Port,
+				Name: "duckdb",
+			}},
+		},
+	}
+
+	// Set the ownerRef for the Service
+	if err := ctrl.SetControllerReference(duckdb, service, r.Scheme); err != nil {
+		return nil, err
+	}
+
+	return service, nil
+}
+
+// statefulSetForDuckDB returns a DuckDB StatefulSet object
+func (r *DuckDBReconciler) statefulSetForDuckDB(
+	duckdb *v1alpha1.DuckDB) (*appsv1.StatefulSet, error) {
 	// Use the image from Spec if provided, otherwise fallback or error
-	// For now, we assume the user provides valid PodSpec or at least Image.
+	// For now, we assume the user provides valid StatefulSetSpec or at least Image.
 	// If Spec.Spec is empty, we construct a minimal one.
 	image := duckdb.Spec.Image.Repository + ":" + duckdb.Spec.Image.Tag
 	if duckdb.Spec.Image.Repository == "" {
@@ -246,29 +298,59 @@ func (r *DuckDBReconciler) podForDuckDB(
 		duckdb.Name = fmt.Sprintf("duckdb-%s", string(suffix))
 	}
 
-	pod := &corev1.Pod{
+	auth := duckdb.Spec.Auth
+	envVars := []corev1.EnvVar{}
+	if auth.SecretRef.Name != "" {
+		envVars = append(envVars, corev1.EnvVar{
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: auth.SecretRef.Name},
+					Key:                  auth.PasswordKey,
+				},
+			},
+		})
+	} else {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "GIZMOSQL_PASSWORD",
+			Value: "gizmosql_password",
+		})
+	}
+
+	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      duckdb.Name,
 			Namespace: duckdb.Namespace,
 		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{
-				Image:           image,
-				Name:            "duckdb",
-				ImagePullPolicy: duckdb.Spec.Image.PullPolicy,
-				Ports: []corev1.ContainerPort{{
-					ContainerPort: duckdb.Spec.Port, // Use the port from spec
-					Name:          "duckdb",
-				}},
-			}},
+		Spec: appsv1.StatefulSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labelsForDuckDB(duckdb.Name),
+			},
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Image:           image,
+						Name:            "duckdb",
+						ImagePullPolicy: duckdb.Spec.Image.PullPolicy,
+						Env:             envVars,
+						Ports: []corev1.ContainerPort{{
+							ContainerPort: duckdb.Spec.Port,
+							Name:          "duckdb",
+						}},
+					}},
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labelsForDuckDB(duckdb.Name),
+				},
+			},
+			ServiceName: duckdb.Name,
 		},
 	}
 
-	// Set the ownerRef for the Pod
-	if err := ctrl.SetControllerReference(duckdb, pod, r.Scheme); err != nil {
+	// Set the ownerRef for the StatefulSet
+	if err := ctrl.SetControllerReference(duckdb, statefulSet, r.Scheme); err != nil {
 		return nil, err
 	}
-	return pod, nil
+	return statefulSet, nil
 }
 
 // labelsForDuckDB returns the labels for selecting the resources
@@ -295,6 +377,6 @@ func imageForDuckDB() (string, error) {
 func (r *DuckDBReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DuckDB{}).
-		Owns(&corev1.Pod{}).
+		Owns(&appsv1.StatefulSet{}).
 		Complete(r)
 }

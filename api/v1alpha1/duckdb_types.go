@@ -35,12 +35,20 @@ type DuckDBSpec struct {
 	// Port defines the port to expose. Default is typically 31337 or similar for gizmosql.
 	// +optional
 	Port int32 `json:"port,omitempty" default:"31337"`
+
+	// Authentication configuration.
+	Auth DuckDBAuth `json:"auth,omitempty"`
 }
 
 type DuckDBImage struct {
 	Repository string            `json:"repository,omitempty"`
 	Tag        string            `json:"tag,omitempty"`
 	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty" default:"Always"`
+}
+
+type DuckDBAuth struct {
+	SecretRef   corev1.SecretReference `json:"secretRef,omitempty"`
+	PasswordKey string                 `json:"passwordKey,omitempty"`
 }
 
 // DuckDBStatus defines the observed state of DuckDB.
