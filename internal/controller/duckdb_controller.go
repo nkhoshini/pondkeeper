@@ -336,7 +336,11 @@ func (r *DuckDBReconciler) statefulSetForDuckDB(
 							ContainerPort: duckdb.Spec.Port,
 							Name:          "duckdb",
 						}},
+						Resources: duckdb.Spec.Resources,
 					}},
+					Affinity:     duckdb.Spec.Affinity,
+					NodeSelector: duckdb.Spec.NodeSelector,
+					Tolerations:  duckdb.Spec.Tolerations,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labelsForDuckDB(duckdb.Name),

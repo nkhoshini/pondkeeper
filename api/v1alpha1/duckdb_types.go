@@ -38,6 +38,17 @@ type DuckDBSpec struct {
 
 	// Authentication configuration.
 	Auth DuckDBAuth `json:"auth,omitempty"`
+
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// NodeSelector defines the node selector for the DuckDB instance.
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Affinity defines the affinity for the DuckDB instance.
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// Tolerations defines the tolerations for the DuckDB instance.
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 type DuckDBImage struct {
