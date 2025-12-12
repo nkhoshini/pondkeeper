@@ -35,16 +35,16 @@ jobs:
           make docker-build IMG=pondkeeper:v0.1.0
           kind load docker-image pondkeeper:v0.1.0
 
-      - name: Install Helm
+      - name: Build Helm Chart
         run: |
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
+          OUTPUT_DIR=dist make chart-build
+      
       - name: Verify Helm installation
-        run: helm version
+        run: bin/helm version
 
       - name: Lint Helm Chart
         run: |
-          helm lint ./dist/chart
+          bin/helm lint dist/chart
 
 # TODO: Uncomment if cert-manager is enabled
 #      - name: Install cert-manager via Helm (wait for readiness)
@@ -67,8 +67,8 @@ jobs:
 
       - name: Install Helm chart for project
         run: |
-          helm install my-release ./dist/chart --create-namespace --namespace pondkeeper-system
+          bin/helm install my-release ./dist/chart --create-namespace --namespace pondkeeper-system
 
       - name: Check Helm release status
         run: |
-          helm status my-release --namespace pondkeeper-system
+          bin/helm status my-release --namespace pondkeeper-system
