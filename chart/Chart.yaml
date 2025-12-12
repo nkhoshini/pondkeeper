@@ -4,4 +4,4 @@ description: A Helm chart to distribute the project pondkeeper
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
-icon: "https://example.com/icon.png"
+icon: "https://gizmodata.com/gizmodata-logo.png"
