@@ -262,6 +262,24 @@ setup-envtest: envtest ## Download the binaries required for ENVTEST in the loca
 		exit 1; \
 	}
 
+.PHONY: helm
+HELM ?= $(LOCALBIN)/helm
+HELM_VERSION ?= v3.14.4
+
+helm: $(HELM) ## Download helm locally if necessary.
+
+$(HELM): $(LOCALBIN)
+	@echo "Downloading helm $(HELM_VERSION)..."
+	@OS=$(shell uname | tr A-Z a-z); \
+	ARCH=$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/'); \
+	URL="https://get.helm.sh/helm-$(HELM_VERSION)-$${OS}-$${ARCH}.tar.gz"; \
+	TMPDIR=$$(mktemp -d); \
+	curl -fsSL $${URL} -o $${TMPDIR}/helm.tar.gz; \
+	tar -xzf $${TMPDIR}/helm.tar.gz -C $${TMPDIR}; \
+	mv $${TMPDIR}/$${OS}-$${ARCH}/helm $(HELM); \
+	chmod +x $(HELM); \
+	rm -rf $${TMPDIR}
+
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(LOCALBIN)
@@ -360,3 +378,18 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+.PHONY: chart-build
+chart-build: ## Build the chart.
+	@if [ -n "$(OUTPUT_DIR)" ]; then \
+		kubebuilder edit --plugins=helm/v2-alpha --force --output-dir=$(OUTPUT_DIR); \
+	else \
+		kubebuilder edit --plugins=helm/v2-alpha --force --output-dir=.; \
+	fi
+
+.PHONY: chart-push
+chart-push: ## Push the chart. WIP
+	mkdir -p dist
+	OUTPUT_DIR=dist $(MAKE) chart-build
+	$(HELM) package dist/chart --destination dist
+# $(HELM)  push dist/chart $(CHART_REPO)
