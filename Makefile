@@ -234,6 +234,8 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
+HELM ?= $(LOCALBIN)/helm
+KUBEBUILDER ?= $(LOCALBIN)/kubebuilder
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.6.0
@@ -243,6 +245,12 @@ ENVTEST_VERSION ?= $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller
 #ENVTEST_K8S_VERSION is the version of Kubernetes to use for setting up ENVTEST binaries (i.e. 1.31)
 ENVTEST_K8S_VERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $$3}')
 GOLANGCI_LINT_VERSION ?= v2.1.0
+HELM_VERSION ?= v3.14.4
+KUBEBUILDER_VERSION ?= v4.10.1
+
+# OS specific variables
+OS ?= $(shell uname | tr A-Z a-z)
+ARCH ?= $(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -263,22 +271,31 @@ setup-envtest: envtest ## Download the binaries required for ENVTEST in the loca
 	}
 
 .PHONY: helm
-HELM ?= $(LOCALBIN)/helm
-HELM_VERSION ?= v3.14.4
-
 helm: $(HELM) ## Download helm locally if necessary.
-
 $(HELM): $(LOCALBIN)
-	@echo "Downloading helm $(HELM_VERSION)..."
-	@OS=$(shell uname | tr A-Z a-z); \
-	ARCH=$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/'); \
-	URL="https://get.helm.sh/helm-$(HELM_VERSION)-$${OS}-$${ARCH}.tar.gz"; \
-	TMPDIR=$$(mktemp -d); \
-	curl -fsSL $${URL} -o $${TMPDIR}/helm.tar.gz; \
-	tar -xzf $${TMPDIR}/helm.tar.gz -C $${TMPDIR}; \
-	mv $${TMPDIR}/$${OS}-$${ARCH}/helm $(HELM); \
-	chmod +x $(HELM); \
-	rm -rf $${TMPDIR}
+	@if [ -f "$(LOCALBIN)/helm" ]; then \
+		echo "Helm already exists at $(HELM). Skipping download."; \
+	else \
+		echo "Downloading helm $(HELM_VERSION)..."; \
+		URL="https://get.helm.sh/helm-$(HELM_VERSION)-$(OS)-$(ARCH).tar.gz"; \
+		TMPDIR=$$(mktemp -d); \
+		curl -fsSL $${URL} -o $${TMPDIR}/helm.tar.gz; \
+		tar -xzf $${TMPDIR}/helm.tar.gz -C $${TMPDIR}; \
+		mv $${TMPDIR}/$(OS)-$(ARCH)/helm $(HELM); \
+		chmod +x $(HELM); \
+		rm -rf $${TMPDIR}; \
+	fi
+
+.PHONY: kubebuilder
+kubebuilder: $(KUBEBUILDER) ## Download kubebuilder locally if necessary.
+$(KUBEBUILDER): $(LOCALBIN)
+	@if [ -f "$(LOCALBIN)/kubebuilder" ]; then \
+		echo "Kubebuilder already exists at $(KUBEBUILDER). Skipping download."; \
+	else \
+		echo "Downloading kubebuilder $(KUBEBUILDER_VERSION)..."; \
+		curl -L -o $(LOCALBIN)/kubebuilder "https://github.com/kubernetes-sigs/kubebuilder/releases/download/$(KUBEBUILDER_VERSION)/kubebuilder_$(OS)_$(ARCH)"; \
+		chmod +x $(KUBEBUILDER); \
+	fi
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
@@ -381,14 +398,16 @@ catalog-push: ## Push a catalog image.
 
 .PHONY: chart-build
 chart-build: ## Build the chart.
+	$(MAKE) kubebuilder
 	@if [ -n "$(OUTPUT_DIR)" ]; then \
-		kubebuilder edit --plugins=helm/v2-alpha --force --output-dir=$(OUTPUT_DIR); \
+		$(KUBEBUILDER) edit --plugins=helm/v2-alpha --force --output-dir=$(OUTPUT_DIR); \
 	else \
-		kubebuilder edit --plugins=helm/v2-alpha --force --output-dir=.; \
+		$(KUBEBUILDER) edit --plugins=helm/v2-alpha --force --output-dir=.; \
 	fi
 
 .PHONY: chart-push
 chart-push: ## Push the chart. WIP
+	$(MAKE) helm
 	mkdir -p dist
 	OUTPUT_DIR=dist $(MAKE) chart-build
 	$(HELM) package dist/chart --destination dist

@@ -32,8 +32,8 @@ jobs:
       - name: Prepare pondkeeper
         run: |
           go mod tidy
-          make docker-build IMG=pondkeeper:v0.1.0
-          kind load docker-image pondkeeper:v0.1.0
+          make docker-build IMG=nkhoshini/pondkeeper:v0.1.0
+          kind load docker-image nkhoshini/pondkeeper:v0.1.0
 
       - name: Build Helm Chart
         run: |
